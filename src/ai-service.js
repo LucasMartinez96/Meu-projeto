@@ -1,5 +1,5 @@
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 const CATEGORIES = ['Trabalho', 'Pessoal', 'Saúde', 'Estudo', 'Outros'];
 const PRIORITIES = ['alta', 'media', 'baixa'];
 const TIME_RE = /^(?:$|(?:[01]\d|2[0-3]):[0-5]\d)$/;
@@ -111,7 +111,6 @@ function createAiService({ apiKey, fetchImpl = globalThis.fetch } = {}) {
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: ROUTINE_SCHEMA,
-            temperature: 0.2,
           },
         }),
       }
