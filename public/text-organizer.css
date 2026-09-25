@@ -1,0 +1,27 @@
+.text-ai-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.text-ai-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.text-ai-head strong { font-size: 14px; }
+.text-ai-head span { color: var(--green); font-size: 12px; font-weight: 800; }
+#textRoutineInput {
+  min-height: 104px;
+  resize: vertical;
+  line-height: 1.45;
+}
+.text-ai-action {
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 15px;
+  background: var(--green);
+  color: #031208;
+  font-weight: 850;
+}
+.text-ai-action:disabled { opacity: .58; cursor: default; }
+.text-ai-help { margin: -2px 2px 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
