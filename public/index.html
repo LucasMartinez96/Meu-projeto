@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="dark">
   <title>Lucas PRO — Minhas Atividades</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/text-organizer.css">
 </head>
 <body>
   <main class="app">
@@ -44,6 +45,16 @@
         <span><strong>Falar minha rotina</strong><small>A IA organiza para você revisar</small></span>
         <span class="voice-arrow">›</span>
       </button>
+
+      <section class="text-ai-card" aria-label="Organizar tarefas digitadas com IA">
+        <div class="text-ai-head">
+          <strong>🧠 Organizar com IA</strong>
+          <span>Gemini</span>
+        </div>
+        <textarea id="textRoutineInput" maxlength="4000" placeholder="Digite tudo que precisa fazer hoje, do seu jeito..."></textarea>
+        <p class="text-ai-help">A IA considera as tarefas já cadastradas e sugere horários livres, prioridade e categoria.</p>
+        <button id="organizeTextBtn" class="text-ai-action" type="button">Organizar meu dia</button>
+      </section>
     </section>
 
     <section class="tasks-section">
@@ -54,7 +65,7 @@
       <div id="emptyState" class="empty-state">
         <div class="empty-icon">✓</div>
         <strong>Seu dia está livre</strong>
-        <p>Adicione uma atividade pelo botão + ou fale sua rotina para a IA.</p>
+        <p>Adicione uma atividade pelo botão +, digite suas tarefas ou fale sua rotina para a IA.</p>
       </div>
       <div id="taskList" class="task-list"></div>
     </section>
@@ -132,5 +143,6 @@
 
   <script src="/planner-logic.js"></script>
   <script src="/app.js"></script>
+  <script src="/text-organizer.js"></script>
 </body>
 </html>
