@@ -15,13 +15,57 @@ test('uses a free-tier Gemini model with documented structured-output support', 
   assert.equal(text.GEMINI_MODEL, 'gemini-3.1-flash-lite');
 });
 
-test('Gemini schemas omit unsupported string validation keywords', () => {
+test('Gemini schemas omit unsupported validation keywords', () => {
   for (const schema of [audio.ROUTINE_SCHEMA, text.TEXT_SCHEMA]) {
     const encoded = JSON.stringify(schema);
     assert.doesNotMatch(encoded, /"pattern"/);
     assert.doesNotMatch(encoded, /"minLength"/);
     assert.doesNotMatch(encoded, /"maxLength"/);
+    assert.doesNotMatch(encoded, /"additionalProperties"/);
   }
+});
+
+test('local voice validation still rejects unexpected task properties', () => {
+  assert.equal(audio.validateRoutinePayload({
+    transcription: 'Conferir estoque às oito.',
+    tasks: [{
+      title: 'Conferir estoque',
+      time: '08:00',
+      category: 'Trabalho',
+      priority: 'alta',
+      notes: '',
+      unexpected: 'nao permitido',
+    }],
+  }), false);
+});
+
+test('local text validation still rejects unexpected task properties', async () => {
+  const service = text.createTextAiService({
+    apiKey: 'test-key',
+    fetchImpl: async () => jsonResponse({
+      candidates: [{
+        content: {
+          parts: [{
+            text: JSON.stringify({
+              tasks: [{
+                title: 'Conferir estoque',
+                time: '08:00',
+                category: 'Trabalho',
+                priority: 'alta',
+                notes: '',
+                unexpected: 'nao permitido',
+              }],
+            }),
+          }],
+        },
+      }],
+    }),
+  });
+
+  await assert.rejects(
+    () => service.analyzeText({ text: 'Conferir estoque às 8h' }),
+    /invalid/i
+  );
 });
 
 test('text organizer omits deprecated sampling parameters on Gemini 3.x', async () => {
