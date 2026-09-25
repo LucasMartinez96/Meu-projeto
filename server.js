@@ -5,6 +5,7 @@ const { createAiService } = require('./src/ai-service');
 const { createRequestHandler } = require('./src/app');
 const { createTextAiService } = require('./src/text-ai-service');
 const { createTextRouteHandler } = require('./src/text-api');
+const { runAiStartupDiagnostic } = require('./src/ai-startup-diagnostic');
 
 function loadLocalEnv(filePath = path.join(__dirname, '.env')) {
   if (!fs.existsSync(filePath)) return;
@@ -36,4 +37,9 @@ const server = http.createServer(async (req, res) => {
 });
 server.listen(port, '0.0.0.0', () => {
   console.log(`Lucas PRO online na porta ${port}${apiKey ? '' : ' (IA sem chave configurada)'}`);
+  if (apiKey) {
+    runAiStartupDiagnostic({ apiKey }).catch(() => {
+      console.log('[AI DIAG] unexpected=true');
+    });
+  }
 });
