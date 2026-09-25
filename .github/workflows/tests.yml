@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/gemini-structured-output
+      - diag/gemini-status
 
 jobs:
   test:
