@@ -1,0 +1,6 @@
+node_modules/
+.env
+.superpowers/
+coverage/
+*.log
+.DS_Store
