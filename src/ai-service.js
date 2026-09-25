@@ -9,8 +9,6 @@ const ROUTINE_SCHEMA = {
   properties: {
     transcription: {
       type: 'string',
-      minLength: 1,
-      maxLength: 5000,
       description: 'Transcrição fiel, em português, da rotina falada no áudio.',
     },
     tasks: {
@@ -19,11 +17,11 @@ const ROUTINE_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          title: { type: 'string', minLength: 1, maxLength: 120 },
-          time: { type: 'string', pattern: '^(?:$|(?:[01]\\d|2[0-3]):[0-5]\\d)$' },
+          title: { type: 'string', description: 'Título curto e acionável da tarefa.' },
+          time: { type: 'string', description: 'Horário no formato HH:MM ou string vazia quando não houver horário confiável.' },
           category: { type: 'string', enum: CATEGORIES },
           priority: { type: 'string', enum: PRIORITIES },
-          notes: { type: 'string', maxLength: 180 },
+          notes: { type: 'string', description: 'Observação curta sobre a tarefa; pode ser vazia.' },
         },
         required: ['title', 'time', 'category', 'priority', 'notes'],
         additionalProperties: false,
