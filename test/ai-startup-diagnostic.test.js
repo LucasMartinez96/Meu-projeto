@@ -9,7 +9,7 @@ function response(body, status = 200) {
   });
 }
 
-test('startup diagnostic compares structured output formats and captures safe validation messages', async () => {
+test('legacy structured output succeeds when responseSchema omits additionalProperties', async () => {
   const calls = [];
   const logs = [];
   const fetchImpl = async (url, options = {}) => {
@@ -17,12 +17,17 @@ test('startup diagnostic compares structured output formats and captures safe va
     if (url.endsWith('/models')) {
       return response({ models: [{ name: 'models/gemini-3.1-flash-lite', supportedGenerationMethods: ['generateContent'] }] });
     }
+
     const body = JSON.parse(options.body || '{}');
     if (body.generationConfig?.responseMimeType) {
-      return response({ error: { message: 'Legacy schema rejected: unknown field foo' } }, 400);
+      const schema = body.generationConfig.responseSchema || {};
+      if (Object.hasOwn(schema, 'additionalProperties')) {
+        return response({ error: { message: 'Unknown name "additionalProperties" at generation_config.response_schema' } }, 400);
+      }
+      return response({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }, 200);
     }
     if (body.generationConfig?.responseFormat) {
-      return response({ error: { message: 'Current schema rejected: bad request' } }, 400);
+      return response({ error: { message: 'Current responseFormat rejected' } }, 400);
     }
     return response({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }, 200);
   };
@@ -37,14 +42,11 @@ test('startup diagnostic compares structured output formats and captures safe va
     modelsStatus: 200,
     modelAvailable: true,
     generateStatus: 200,
-    legacyStructuredStatus: 400,
+    legacyStructuredStatus: 200,
     currentStructuredStatus: 400,
   });
   assert.equal(calls.length, 4);
-  const joined = logs.join('\n');
-  assert.equal(joined.includes('secret-test-key'), false);
-  assert.equal(joined.includes('Legacy schema rejected'), true);
-  assert.equal(joined.includes('Current schema rejected'), true);
+  assert.equal(logs.join('\n').includes('secret-test-key'), false);
 });
 
 test('startup diagnostic sanitizes API keys from provider validation messages', async () => {
