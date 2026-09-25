@@ -1,5 +1,5 @@
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 const CATEGORIES = ['Trabalho', 'Pessoal', 'Saúde', 'Estudo', 'Outros'];
 const PRIORITIES = ['alta', 'media', 'baixa'];
 const TIME_RE = /^(?:$|(?:[01]\d|2[0-3]):[0-5]\d)$/;
@@ -84,7 +84,7 @@ function createTextAiService({ apiKey, fetchImpl = globalThis.fetch } = {}) {
         headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema: TEXT_SCHEMA, temperature: 0.2 },
+          generationConfig: { responseMimeType: 'application/json', responseSchema: TEXT_SCHEMA },
         }),
       });
       if (!response.ok) throw new Error(`Gemini text request failed (${response.status})`);
