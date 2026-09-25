@@ -1,10 +1,8 @@
+const { ROUTINE_SCHEMA } = require('./ai-service');
+const { TEXT_SCHEMA } = require('./text-ai-service');
+
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_MODEL = 'gemini-3.1-flash-lite';
-const TEST_SCHEMA = {
-  type: 'object',
-  properties: { ok: { type: 'boolean' } },
-  required: ['ok'],
-};
 
 function sanitizeMessage(value) {
   return String(value || '')
@@ -13,7 +11,7 @@ function sanitizeMessage(value) {
     .slice(0, 500);
 }
 
-async function postGenerate({ apiKey, fetchImpl, generationConfig }) {
+async function postGenerate({ apiKey, fetchImpl, responseSchema }) {
   try {
     const response = await fetchImpl(`${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent`, {
       method: 'POST',
@@ -22,8 +20,13 @@ async function postGenerate({ apiKey, fetchImpl, generationConfig }) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: 'Retorne um objeto JSON com ok=true.' }] }],
-        ...(generationConfig ? { generationConfig } : {}),
+        contents: [{ role: 'user', parts: [{ text: 'Responda de forma mínima e válida.' }] }],
+        ...(responseSchema ? {
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema,
+          },
+        } : {}),
       }),
     });
 
@@ -48,10 +51,10 @@ async function runAiStartupDiagnostic({ apiKey, fetchImpl = globalThis.fetch, lo
       modelsStatus: 0,
       modelAvailable: false,
       generateStatus: 0,
-      legacyStructuredStatus: 0,
-      currentStructuredStatus: 0,
+      textSchemaStatus: 0,
+      routineSchemaStatus: 0,
     };
-    logger('[AI DIAG] modelsStatus=0 modelAvailable=false generateStatus=0 legacyStructuredStatus=0 currentStructuredStatus=0');
+    logger('[AI DIAG] modelsStatus=0 modelAvailable=false generateStatus=0 textSchemaStatus=0 routineSchemaStatus=0');
     return result;
   }
 
@@ -77,43 +80,25 @@ async function runAiStartupDiagnostic({ apiKey, fetchImpl = globalThis.fetch, lo
   }
 
   const plain = await postGenerate({ apiKey, fetchImpl });
-  const legacy = await postGenerate({
-    apiKey,
-    fetchImpl,
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: TEST_SCHEMA,
-    },
-  });
-  const current = await postGenerate({
-    apiKey,
-    fetchImpl,
-    generationConfig: {
-      responseFormat: {
-        text: {
-          mimeType: 'application/json',
-          schema: TEST_SCHEMA,
-        },
-      },
-    },
-  });
+  const textSchema = await postGenerate({ apiKey, fetchImpl, responseSchema: TEXT_SCHEMA });
+  const routineSchema = await postGenerate({ apiKey, fetchImpl, responseSchema: ROUTINE_SCHEMA });
 
   const result = {
     modelsStatus,
     modelAvailable,
     generateStatus: plain.status,
-    legacyStructuredStatus: legacy.status,
-    currentStructuredStatus: current.status,
+    textSchemaStatus: textSchema.status,
+    routineSchemaStatus: routineSchema.status,
   };
   const messageParts = [
     `[AI DIAG] modelsStatus=${modelsStatus}`,
     `modelAvailable=${modelAvailable}`,
     `generateStatus=${plain.status}`,
-    `legacyStructuredStatus=${legacy.status}`,
-    `currentStructuredStatus=${current.status}`,
+    `textSchemaStatus=${textSchema.status}`,
+    `routineSchemaStatus=${routineSchema.status}`,
   ];
-  if (legacy.message) messageParts.push(`legacyMessage=${legacy.message}`);
-  if (current.message) messageParts.push(`currentMessage=${current.message}`);
+  if (textSchema.message) messageParts.push(`textSchemaMessage=${textSchema.message}`);
+  if (routineSchema.message) messageParts.push(`routineSchemaMessage=${routineSchema.message}`);
   logger(messageParts.join(' '));
   return result;
 }
