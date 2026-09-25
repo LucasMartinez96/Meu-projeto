@@ -15,6 +15,15 @@ test('uses a free-tier Gemini model with documented structured-output support', 
   assert.equal(text.GEMINI_MODEL, 'gemini-3.1-flash-lite');
 });
 
+test('Gemini schemas omit unsupported string validation keywords', () => {
+  for (const schema of [audio.ROUTINE_SCHEMA, text.TEXT_SCHEMA]) {
+    const encoded = JSON.stringify(schema);
+    assert.doesNotMatch(encoded, /"pattern"/);
+    assert.doesNotMatch(encoded, /"minLength"/);
+    assert.doesNotMatch(encoded, /"maxLength"/);
+  }
+});
+
 test('text organizer omits deprecated sampling parameters on Gemini 3.x', async () => {
   let requestBody;
   const service = text.createTextAiService({
