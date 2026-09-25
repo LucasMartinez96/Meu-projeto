@@ -20,12 +20,10 @@ const TEXT_SCHEMA = {
           notes: { type: 'string', description: 'Observação curta sobre a tarefa; pode ser vazia.' },
         },
         required: ['title', 'time', 'category', 'priority', 'notes'],
-        additionalProperties: false,
       },
     },
   },
   required: ['tasks'],
-  additionalProperties: false,
 };
 
 function extractText(payload) {
