@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050806">
+  <meta name="color-scheme" content="dark">
+  <title>Lucas PRO — Minhas Atividades</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">LP</div>
+        <div>
+          <p class="brand-title">LUCAS PRO</p>
+          <p class="brand-subtitle">Controle pessoal do dia</p>
+        </div>
+      </div>
+      <span class="status-pill"><i></i> Local</span>
+    </header>
+
+    <section class="hero">
+      <div>
+        <span class="eyebrow">Minha rotina</span>
+        <h1>Hoje</h1>
+        <p id="todayLabel" class="today-label"></p>
+      </div>
+
+      <section class="progress-card" aria-label="Progresso do dia">
+        <div class="progress-top">
+          <div>
+            <span class="muted-label">Progresso do dia</span>
+            <strong id="progressCount">0 de 0 concluídas</strong>
+          </div>
+          <span id="progressPercent" class="progress-percent">0%</span>
+        </div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+      </section>
+
+      <button id="voiceRoutineBtn" class="voice-cta" type="button">
+        <span class="voice-icon">🎤</span>
+        <span><strong>Falar minha rotina</strong><small>A IA organiza para você revisar</small></span>
+        <span class="voice-arrow">›</span>
+      </button>
+    </section>
+
+    <section class="tasks-section">
+      <div class="section-heading">
+        <h2>Atividades</h2>
+        <span id="taskCount">0 tarefas</span>
+      </div>
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">✓</div>
+        <strong>Seu dia está livre</strong>
+        <p>Adicione uma atividade pelo botão + ou fale sua rotina para a IA.</p>
+      </div>
+      <div id="taskList" class="task-list"></div>
+    </section>
+  </main>
+
+  <button id="fabAdd" class="fab" type="button" aria-label="Adicionar atividade">+</button>
+
+  <div id="taskModal" class="modal" aria-hidden="true">
+    <div class="modal-card bottom-sheet">
+      <div class="modal-head">
+        <div><span class="eyebrow">Planejar</span><h2 id="modalTitle">Nova atividade</h2></div>
+        <button id="closeModal" class="round-icon" type="button" aria-label="Fechar">×</button>
+      </div>
+      <form id="taskForm">
+        <input id="editId" type="hidden">
+        <label class="field"><span>Atividade</span><input id="taskTitle" maxlength="120" placeholder="O que você precisa fazer?" autocomplete="off"></label>
+        <div class="field-row">
+          <label class="field"><span>Horário</span><input id="taskTime" type="time"></label>
+          <label class="field"><span>Categoria</span>
+            <select id="taskCategory">
+              <option>Trabalho</option><option>Pessoal</option><option>Saúde</option><option>Estudo</option><option selected>Outros</option>
+            </select>
+          </label>
+        </div>
+        <fieldset class="priority-field">
+          <legend>Prioridade</legend>
+          <div id="priorityGrid" class="priority-grid">
+            <button class="priority-btn" data-priority="low" type="button">Baixa</button>
+            <button class="priority-btn active" data-priority="medium" type="button">Média</button>
+            <button class="priority-btn" data-priority="high" type="button">Alta</button>
+          </div>
+        </fieldset>
+        <label class="field"><span>Observação <em>opcional</em></span><textarea id="taskNotes" maxlength="180" rows="3" placeholder="Algum detalhe importante?"></textarea></label>
+        <div class="form-actions">
+          <button id="cancelModal" class="btn secondary" type="button">Cancelar</button>
+          <button class="btn primary" type="submit">Salvar atividade</button>
+        </div>
+        <button id="deleteTaskBtn" class="delete-btn" type="button">Excluir atividade</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="voiceModal" class="modal" aria-hidden="true">
+    <div class="modal-card voice-sheet">
+      <div class="modal-head">
+        <div><span class="eyebrow">Assistente por voz</span><h2>Conte sua rotina</h2></div>
+        <button id="cancelVoiceBtn" class="round-icon" type="button" aria-label="Cancelar gravação">×</button>
+      </div>
+      <div class="recording-zone">
+        <div id="micOrb" class="mic-orb">🎤</div>
+        <p id="voiceStatus" class="voice-status">Preparando microfone...</p>
+        <strong id="voiceTimer" class="voice-timer">00:00</strong>
+        <p class="voice-hint">Fale naturalmente: compromissos, horários e o que é mais importante no seu dia.</p>
+      </div>
+      <button id="stopRecordingBtn" class="btn stop-recording" type="button">Parar e organizar</button>
+    </div>
+  </div>
+
+  <div id="aiReviewModal" class="modal review-modal" aria-hidden="true">
+    <div class="modal-card review-sheet">
+      <div class="modal-head sticky-head">
+        <div><span class="eyebrow">Sugestão da IA</span><h2>Revise sua agenda</h2></div>
+        <button id="cancelAiReview" class="round-icon" type="button" aria-label="Cancelar sugestões">×</button>
+      </div>
+      <div class="transcript-box"><span>Entendi:</span><p id="aiTranscription"></p></div>
+      <div id="aiSuggestionList" class="suggestion-list"></div>
+      <div class="review-actions">
+        <button id="discardAiReview" class="btn secondary" type="button">Cancelar</button>
+        <button id="confirmAiTasks" class="btn primary" type="button">Adicionar à minha agenda</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/planner-logic.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
