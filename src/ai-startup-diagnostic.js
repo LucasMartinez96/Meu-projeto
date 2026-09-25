@@ -7,6 +7,13 @@ const TEST_SCHEMA = {
   additionalProperties: false,
 };
 
+function sanitizeMessage(value) {
+  return String(value || '')
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, '[REDACTED_KEY]')
+    .replace(/[\r\n]+/g, ' ')
+    .slice(0, 500);
+}
+
 async function postGenerate({ apiKey, fetchImpl, generationConfig }) {
   try {
     const response = await fetchImpl(`${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent`, {
@@ -20,9 +27,19 @@ async function postGenerate({ apiKey, fetchImpl, generationConfig }) {
         ...(generationConfig ? { generationConfig } : {}),
       }),
     });
-    return response.status;
+
+    let message = '';
+    if (!response.ok) {
+      try {
+        const payload = await response.json();
+        message = sanitizeMessage(payload?.error?.message || payload?.error?.status || '');
+      } catch {
+        message = '';
+      }
+    }
+    return { status: response.status, message };
   } catch {
-    return -1;
+    return { status: -1, message: 'network-error' };
   }
 }
 
@@ -60,8 +77,8 @@ async function runAiStartupDiagnostic({ apiKey, fetchImpl = globalThis.fetch, lo
     modelsStatus = -1;
   }
 
-  const generateStatus = await postGenerate({ apiKey, fetchImpl });
-  const legacyStructuredStatus = await postGenerate({
+  const plain = await postGenerate({ apiKey, fetchImpl });
+  const legacy = await postGenerate({
     apiKey,
     fetchImpl,
     generationConfig: {
@@ -69,7 +86,7 @@ async function runAiStartupDiagnostic({ apiKey, fetchImpl = globalThis.fetch, lo
       responseSchema: TEST_SCHEMA,
     },
   });
-  const currentStructuredStatus = await postGenerate({
+  const current = await postGenerate({
     apiKey,
     fetchImpl,
     generationConfig: {
@@ -82,8 +99,24 @@ async function runAiStartupDiagnostic({ apiKey, fetchImpl = globalThis.fetch, lo
     },
   });
 
-  logger(`[AI DIAG] modelsStatus=${modelsStatus} modelAvailable=${modelAvailable} generateStatus=${generateStatus} legacyStructuredStatus=${legacyStructuredStatus} currentStructuredStatus=${currentStructuredStatus}`);
-  return { modelsStatus, modelAvailable, generateStatus, legacyStructuredStatus, currentStructuredStatus };
+  const result = {
+    modelsStatus,
+    modelAvailable,
+    generateStatus: plain.status,
+    legacyStructuredStatus: legacy.status,
+    currentStructuredStatus: current.status,
+  };
+  const messageParts = [
+    `[AI DIAG] modelsStatus=${modelsStatus}`,
+    `modelAvailable=${modelAvailable}`,
+    `generateStatus=${plain.status}`,
+    `legacyStructuredStatus=${legacy.status}`,
+    `currentStructuredStatus=${current.status}`,
+  ];
+  if (legacy.message) messageParts.push(`legacyMessage=${legacy.message}`);
+  if (current.message) messageParts.push(`currentMessage=${current.message}`);
+  logger(messageParts.join(' '));
+  return result;
 }
 
 module.exports = { runAiStartupDiagnostic };
