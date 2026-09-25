@@ -24,12 +24,10 @@ const ROUTINE_SCHEMA = {
           notes: { type: 'string', description: 'Observação curta sobre a tarefa; pode ser vazia.' },
         },
         required: ['title', 'time', 'category', 'priority', 'notes'],
-        additionalProperties: false,
       },
     },
   },
   required: ['transcription', 'tasks'],
-  additionalProperties: false,
 };
 
 class ProviderError extends Error {
