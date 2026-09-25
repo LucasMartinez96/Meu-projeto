@@ -9,7 +9,7 @@ function response(body, status = 200) {
   });
 }
 
-test('startup diagnostic checks model listing and minimal generation without leaking key', async () => {
+test('startup diagnostic compares structured output formats without leaking key', async () => {
   const calls = [];
   const logs = [];
   const fetchImpl = async (url, options = {}) => {
@@ -17,7 +17,10 @@ test('startup diagnostic checks model listing and minimal generation without lea
     if (url.endsWith('/models')) {
       return response({ models: [{ name: 'models/gemini-3.1-flash-lite', supportedGenerationMethods: ['generateContent'] }] });
     }
-    return response({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] });
+    const body = JSON.parse(options.body || '{}');
+    if (body.generationConfig?.responseMimeType) return response({ error: {} }, 400);
+    if (body.generationConfig?.responseFormat) return response({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }, 200);
+    return response({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }, 200);
   };
 
   const result = await runAiStartupDiagnostic({
@@ -26,12 +29,17 @@ test('startup diagnostic checks model listing and minimal generation without lea
     logger: (line) => logs.push(line),
   });
 
-  assert.deepEqual(result, { modelsStatus: 200, modelAvailable: true, generateStatus: 200 });
-  assert.equal(calls.length, 2);
+  assert.deepEqual(result, {
+    modelsStatus: 200,
+    modelAvailable: true,
+    generateStatus: 200,
+    legacyStructuredStatus: 400,
+    currentStructuredStatus: 200,
+  });
+  assert.equal(calls.length, 4);
   assert.equal(logs.some((line) => line.includes('secret-test-key')), false);
-  assert.equal(logs.some((line) => line.includes('modelsStatus=200')), true);
-  assert.equal(logs.some((line) => line.includes('modelAvailable=true')), true);
-  assert.equal(logs.some((line) => line.includes('generateStatus=200')), true);
+  assert.equal(logs.some((line) => line.includes('legacyStructuredStatus=400')), true);
+  assert.equal(logs.some((line) => line.includes('currentStructuredStatus=200')), true);
 });
 
 test('startup diagnostic reports provider status safely', async () => {
@@ -47,7 +55,13 @@ test('startup diagnostic reports provider status safely', async () => {
     logger: (line) => logs.push(line),
   });
 
-  assert.deepEqual(result, { modelsStatus: 403, modelAvailable: false, generateStatus: 403 });
+  assert.deepEqual(result, {
+    modelsStatus: 403,
+    modelAvailable: false,
+    generateStatus: 403,
+    legacyStructuredStatus: 403,
+    currentStructuredStatus: 403,
+  });
   assert.equal(logs.join('\n').includes('sensitive detail'), false);
   assert.equal(logs.join('\n').includes('secret-test-key'), false);
 });
