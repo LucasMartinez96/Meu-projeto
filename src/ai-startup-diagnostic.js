@@ -4,7 +4,6 @@ const TEST_SCHEMA = {
   type: 'object',
   properties: { ok: { type: 'boolean' } },
   required: ['ok'],
-  additionalProperties: false,
 };
 
 function sanitizeMessage(value) {
