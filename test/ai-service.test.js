@@ -44,7 +44,7 @@ test('analyzes in-memory audio with Gemini and returns transcription plus struct
   assert.equal(calls.length, 1);
   assert.equal(
     calls[0].url,
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent'
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent'
   );
   assert.equal(calls[0].options.headers['x-goog-api-key'], 'gemini-test-key');
   assert.equal(calls[0].options.headers['Content-Type'], 'application/json');
