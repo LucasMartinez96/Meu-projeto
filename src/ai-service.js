@@ -1,4 +1,5 @@
-const OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const CATEGORIES = ['Trabalho', 'Pessoal', 'Saúde', 'Estudo', 'Outros'];
 const PRIORITIES = ['alta', 'media', 'baixa'];
 const TIME_RE = /^(?:$|(?:[01]\d|2[0-3]):[0-5]\d)$/;
@@ -6,6 +7,12 @@ const TIME_RE = /^(?:$|(?:[01]\d|2[0-3]):[0-5]\d)$/;
 const ROUTINE_SCHEMA = {
   type: 'object',
   properties: {
+    transcription: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 5000,
+      description: 'Transcrição fiel, em português, da rotina falada no áudio.',
+    },
     tasks: {
       type: 'array',
       maxItems: 30,
@@ -23,7 +30,7 @@ const ROUTINE_SCHEMA = {
       },
     },
   },
-  required: ['tasks'],
+  required: ['transcription', 'tasks'],
   additionalProperties: false,
 };
 
@@ -35,18 +42,10 @@ class ProviderError extends Error {
   }
 }
 
-function extractOutputText(payload) {
-  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) return payload.output_text;
-  for (const item of payload?.output || []) {
-    for (const content of item?.content || []) {
-      if (content?.type === 'output_text' && typeof content.text === 'string') return content.text;
-    }
-  }
-  return '';
-}
-
 function validateRoutinePayload(value) {
-  if (!value || typeof value !== 'object' || !Array.isArray(value.tasks) || value.tasks.length > 30) return false;
+  if (!value || typeof value !== 'object') return false;
+  if (typeof value.transcription !== 'string' || !value.transcription.trim() || value.transcription.length > 5000) return false;
+  if (!Array.isArray(value.tasks) || value.tasks.length > 30) return false;
   return value.tasks.every((task) => {
     if (!task || typeof task !== 'object') return false;
     const keys = Object.keys(task).sort().join(',');
@@ -59,65 +58,68 @@ function validateRoutinePayload(value) {
   });
 }
 
+function extractCandidateText(payload) {
+  const candidates = Array.isArray(payload?.candidates) ? payload.candidates : [];
+  for (const candidate of candidates) {
+    const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+    for (const part of parts) {
+      if (typeof part?.text === 'string' && part.text.trim()) return part.text;
+    }
+  }
+  return '';
+}
+
 function createAiService({ apiKey, fetchImpl = globalThis.fetch } = {}) {
-  if (!apiKey) throw new Error('OPENAI_API_KEY is required');
+  if (!apiKey) throw new Error('GEMINI_API_KEY is required');
   if (typeof fetchImpl !== 'function') throw new Error('fetch implementation is required');
 
-  const authHeaders = { Authorization: `Bearer ${apiKey}` };
-
-  async function transcribeAudio({ buffer, filename = 'rotina.webm', mimetype = 'audio/webm' }) {
+  async function analyzeAudio({ buffer, mimetype = 'audio/webm' }) {
     if (!buffer || !buffer.length) throw new Error('Audio buffer is empty');
-    const form = new FormData();
-    form.append('file', new Blob([buffer], { type: mimetype }), filename);
-    form.append('model', 'gpt-4o-mini-transcribe');
-    form.append('language', 'pt');
-    form.append('response_format', 'json');
+    if (!String(mimetype).toLowerCase().startsWith('audio/')) throw new Error('Audio mimetype is invalid');
 
-    const response = await fetchImpl(`${OPENAI_BASE_URL}/audio/transcriptions`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: form,
-    });
-    if (!response.ok) throw new ProviderError('OpenAI transcription request failed', response.status);
-    const payload = await response.json();
-    const text = String(payload?.text ?? '').trim();
-    if (!text) throw new Error('Transcription is empty');
-    return text;
-  }
-
-  async function organizeRoutine(transcription) {
-    const clean = String(transcription ?? '').trim();
-    if (!clean) throw new Error('Transcription is empty');
-
-    const response = await fetchImpl(`${OPENAI_BASE_URL}/responses`, {
-      method: 'POST',
-      headers: {
-        ...authHeaders,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-5.6-luna',
-        input: [
-          {
-            role: 'system',
-            content: 'Organize a rotina falada em tarefas curtas e acionáveis. Preserve apenas compromissos mencionados. Não invente atividades. Só preencha time em HH:MM quando houver horário explícito ou contexto realmente suficiente; caso contrário use string vazia. Classifique category entre Trabalho, Pessoal, Saúde, Estudo ou Outros. Infira priority como alta, media ou baixa de forma conservadora. Notes deve ser curta e pode ser vazia.',
-          },
-          { role: 'user', content: clean },
-        ],
-        max_output_tokens: 1800,
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'lucas_pro_routine',
-            strict: true,
-            schema: ROUTINE_SCHEMA,
-          },
+    const response = await fetchImpl(
+      `${GEMINI_BASE_URL}/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
-    if (!response.ok) throw new ProviderError('OpenAI routine request failed', response.status);
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              {
+                inline_data: {
+                  mime_type: mimetype,
+                  data: Buffer.from(buffer).toString('base64'),
+                },
+              },
+              {
+                text: [
+                  'Transcreva fielmente esta rotina falada em português e organize somente os compromissos mencionados em tarefas curtas e acionáveis.',
+                  'Não invente atividades.',
+                  'Use horário no formato HH:MM apenas quando houver horário explícito ou contexto realmente suficiente; caso contrário use string vazia.',
+                  'Classifique category somente como Trabalho, Pessoal, Saúde, Estudo ou Outros.',
+                  'Infira priority como alta, media ou baixa de forma conservadora.',
+                  'Notes deve ser curta e pode ser vazia.',
+                  'A transcrição deve preservar o sentido original do áudio.',
+                ].join(' '),
+              },
+            ],
+          }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: ROUTINE_SCHEMA,
+            temperature: 0.2,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) throw new ProviderError('Gemini routine request failed', response.status);
     const payload = await response.json();
-    const text = extractOutputText(payload);
+    const text = extractCandidateText(payload);
     if (!text) throw new Error('AI output is invalid');
 
     let parsed;
@@ -126,17 +128,22 @@ function createAiService({ apiKey, fetchImpl = globalThis.fetch } = {}) {
     } catch {
       throw new Error('AI output is invalid');
     }
+
     if (!validateRoutinePayload(parsed)) throw new Error('AI output is invalid');
-    return parsed.tasks.map((task) => ({
-      title: task.title.trim(),
-      time: task.time,
-      category: task.category,
-      priority: task.priority,
-      notes: task.notes.trim(),
-    }));
+
+    return {
+      transcription: parsed.transcription.trim(),
+      tasks: parsed.tasks.map((task) => ({
+        title: task.title.trim(),
+        time: task.time,
+        category: task.category,
+        priority: task.priority,
+        notes: task.notes.trim(),
+      })),
+    };
   }
 
-  return { transcribeAudio, organizeRoutine };
+  return { analyzeAudio };
 }
 
 module.exports = {
@@ -144,4 +151,5 @@ module.exports = {
   ProviderError,
   ROUTINE_SCHEMA,
   validateRoutinePayload,
+  GEMINI_MODEL,
 };

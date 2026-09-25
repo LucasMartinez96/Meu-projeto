@@ -23,15 +23,12 @@ function loadLocalEnv(filePath = path.join(__dirname, '.env')) {
 loadLocalEnv();
 
 const port = Number(process.env.PORT || 3000);
-const apiKey = process.env.OPENAI_API_KEY;
+const apiKey = process.env.GEMINI_API_KEY;
 
 const aiService = apiKey
   ? createAiService({ apiKey })
   : {
-      async transcribeAudio() {
-        throw new Error('AI is not configured');
-      },
-      async organizeRoutine() {
+      async analyzeAudio() {
         throw new Error('AI is not configured');
       },
     };

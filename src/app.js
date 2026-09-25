@@ -120,7 +120,7 @@ function createRequestHandler({
   maxAudioBytes = DEFAULT_MAX_AUDIO_BYTES,
   publicDir = path.join(__dirname, '..', 'public'),
 } = {}) {
-  if (!aiService?.transcribeAudio || !aiService?.organizeRoutine) {
+  if (!aiService?.analyzeAudio) {
     throw new Error('aiService is required');
   }
 
@@ -149,9 +149,8 @@ function createRequestHandler({
         }
 
         try {
-          const transcription = await aiService.transcribeAudio(audio);
-          const tasks = await aiService.organizeRoutine(transcription);
-          return sendJson(res, 200, { transcription, tasks });
+          const result = await aiService.analyzeAudio(audio);
+          return sendJson(res, 200, result);
         } catch {
           return sendJson(res, 502, { error: 'Não foi possível organizar sua rotina agora.' });
         }

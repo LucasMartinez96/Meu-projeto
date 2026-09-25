@@ -1,8 +1,8 @@
 {
   "name": "lucas-pro-voice-ai",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "Planner pessoal Lucas PRO com organização de rotina por voz e IA.",
+  "description": "Planner pessoal Lucas PRO com organização de rotina por voz com Gemini.",
   "main": "server.js",
   "engines": { "node": ">=20" },
   "scripts": {
