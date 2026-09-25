@@ -1,0 +1,13 @@
+{
+  "name": "lucas-pro-voice-ai",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Planner pessoal Lucas PRO com organização de rotina por voz e IA.",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
