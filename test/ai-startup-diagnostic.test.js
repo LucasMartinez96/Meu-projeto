@@ -9,7 +9,7 @@ function response(body, status = 200) {
   });
 }
 
-test('legacy structured output succeeds when responseSchema omits additionalProperties', async () => {
+test('startup diagnostic checks the exact production text and voice schemas', async () => {
   const calls = [];
   const logs = [];
   const fetchImpl = async (url, options = {}) => {
@@ -19,17 +19,11 @@ test('legacy structured output succeeds when responseSchema omits additionalProp
     }
 
     const body = JSON.parse(options.body || '{}');
-    if (body.generationConfig?.responseMimeType) {
-      const schema = body.generationConfig.responseSchema || {};
-      if (Object.hasOwn(schema, 'additionalProperties')) {
-        return response({ error: { message: 'Unknown name "additionalProperties" at generation_config.response_schema' } }, 400);
-      }
-      return response({ candidates: [{ content: { parts: [{ text: '{"ok":true}' }] } }] }, 200);
+    const schema = body.generationConfig?.responseSchema;
+    if (schema && JSON.stringify(schema).includes('additionalProperties')) {
+      return response({ error: { message: 'Unknown name "additionalProperties" at generation_config.response_schema' } }, 400);
     }
-    if (body.generationConfig?.responseFormat) {
-      return response({ error: { message: 'Current responseFormat rejected' } }, 400);
-    }
-    return response({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }, 200);
+    return response({ candidates: [{ content: { parts: [{ text: '{}' }] } }] }, 200);
   };
 
   const result = await runAiStartupDiagnostic({
@@ -42,10 +36,12 @@ test('legacy structured output succeeds when responseSchema omits additionalProp
     modelsStatus: 200,
     modelAvailable: true,
     generateStatus: 200,
-    legacyStructuredStatus: 200,
-    currentStructuredStatus: 400,
+    textSchemaStatus: 200,
+    routineSchemaStatus: 200,
   });
   assert.equal(calls.length, 4);
+  const structuredCalls = calls.filter((call) => JSON.parse(call.options.body || '{}').generationConfig?.responseSchema);
+  assert.equal(structuredCalls.length, 2);
   assert.equal(logs.join('\n').includes('secret-test-key'), false);
 });
 
