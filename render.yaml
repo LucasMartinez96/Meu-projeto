@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: lucas-pro-planner
+    runtime: node
+    buildCommand: echo "No external dependencies to install"
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: OPENAI_API_KEY
+        sync: false
